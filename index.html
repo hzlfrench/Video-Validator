@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wistia Video Validator</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <link rel="icon" type="image/svg+xml" href="https://raw.githubusercontent.com/pook-sapot/my-assets/main/Wistia%20Flags%20Blue.svg">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&family=Caveat:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --wistia-blue: #2949E5;
+      --wistia-blue-light: #4A6AEF;
+      --wistia-dark: #0C0C0E;
+      --wistia-light-bg: #F7F8FC;
+      --wistia-light-blue: #EEF2FF;
+      --success: #20BF6B;
+      --success-bg: #E8F8EE;
+      --warning: #F7B731;
+      --warning-bg: #FFF8E6;
+      --error: #EB3B5A;
+      --text-primary: #1A1F36;
+      --text-secondary: #4A5068;
+      --text-muted: #7A7F96;
+      --bg-white: #FFFFFF;
+      --border: #E2E5F1;
+      --code-bg: #F0F2F8;
+      --radius: 16px;
+      --radius-sm: 10px;
+      --shadow-sm: 0 1px 3px rgba(12, 12, 14, 0.04);
+      --shadow-md: 0 4px 16px rgba(12, 12, 14, 0.08);
+      --shadow-lg: 0 8px 32px rgba(12, 12, 14, 0.1);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-white);
+      color: var(--text-primary);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+    }
+
+    .page-gradient {
+      background: linear-gradient(180deg,
+        var(--wistia-blue) 0%,
+        var(--wistia-blue) 18%,
+        #5A7BF0 32%,
+        #8DA4F5 44%,
+        #B4C6F9 54%,
+        #D6E0FC 64%,
+        #EDF1FE 74%,
+        #F7F8FC 84%,
+        var(--bg-white) 94%
+      );
+      min-height: 100vh;
+    }
+
+    /* Hero */
+    .hero {
+      padding: 44px 24px 16px;
+      text-align: center;
+    }
+
+    .hero-content {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .hero img {
+      height: 44px;
+      margin-bottom: 20px;
+      filter: brightness(0) invert(1);
+    }
+
+    .hero h1 {
+      font-size: 34px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.02em;
+      margin-bottom: 10px;
+    }
+
+    .hero p {
+      font-size: 16px;
+      color: rgba(255, 255, 255, 0.75);
+    }
+
+    /* Annotation - positioned top-left like reference */
+    .annotation-section {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 0 20px 8px;
+      position: relative;
+    }
+
+    .annotation-inner {
+      position: relative;
+      height: 130px;
+    }
+
+    .annotation-text {
+      font-family: 'Caveat', cursive;
+      font-size: 26px;
+      font-weight: 600;
+      color: #fff;
+      line-height: 1.2;
+      position: absolute;
+      top: 0;
+      left: 0;
+      opacity: 0;
+      animation: annotationFade 0.8s ease 0.4s forwards;
+    }
+
+    .annotation-arrow-wrap {
+      position: absolute;
+      top: 20px;
+      left: 30px;
+      opacity: 0;
+      animation: annotationFade 0.6s ease 0.8s forwards, breathe 3s ease-in-out 2s infinite;
+    }
+
+    .arrow-draw {
+      stroke-dasharray: 500;
+      stroke-dashoffset: 500;
+      animation: drawLine 1.5s ease 1s forwards;
+    }
+
+    .arrowhead-draw {
+      stroke-dasharray: 40;
+      stroke-dashoffset: 40;
+      animation: drawLine 0.3s ease 2.3s forwards;
+    }
+
+    @keyframes drawLine {
+      to { stroke-dashoffset: 0; }
+    }
+
+    @keyframes annotationFade {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes breathe {
+      0%, 100% { transform: translateY(0); opacity: 0.85; }
+      50% { transform: translateY(6px); opacity: 1; }
+    }
+
+    /* Main */
+    .main {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 0 20px 60px;
+    }
+
+    /* Drop Area */
+    .drop-area-wrapper {
+      animation: fadeUp 0.5s ease 0.3s both;
+    }
+
+    .drop-area {
+      background: var(--bg-white);
+      border: 2px dashed rgba(41, 73, 229, 0.2);
+      border-radius: var(--radius);
+      padding: 48px 30px 36px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      box-shadow: var(--shadow-lg);
+      position: relative;
+    }
+
+    .drop-area:hover {
+      border-color: var(--wistia-blue);
+      box-shadow: var(--shadow-lg), 0 0 0 4px rgba(41, 73, 229, 0.08);
+      transform: translateY(-1px);
+    }
+
+    .drop-area.drag-over {
+      border-color: var(--wistia-blue);
+      background: var(--wistia-light-blue);
+      box-shadow: var(--shadow-lg), 0 0 0 4px rgba(41, 73, 229, 0.12);
+    }
+
+    .drop-icon {
+      width: 72px; height: 72px;
+      background: var(--wistia-light-blue);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+    }
+
+    .drop-icon i { font-size: 28px; color: var(--wistia-blue); }
+
+    .drop-area h3 {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 16px;
+    }
+
+    .drop-area .or-text {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin: 16px 0;
+      position: relative;
+    }
+
+    .drop-area .or-text::before,
+    .drop-area .or-text::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      width: 60px;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .drop-area .or-text::before { right: calc(50% + 20px); }
+    .drop-area .or-text::after { left: calc(50% + 20px); }
+
+    .drop-note {
+      margin-top: 28px;
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* Buttons */
+    .btn {
+      font-family: 'DM Sans', sans-serif;
+      border: none;
+      padding: 11px 28px;
+      border-radius: 50px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: var(--wistia-blue);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(41, 73, 229, 0.3);
+    }
+
+    .btn-primary:hover {
+      background: var(--wistia-blue-light);
+      box-shadow: 0 4px 16px rgba(41, 73, 229, 0.35);
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: var(--bg-white);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: var(--wistia-light-bg);
+      border-color: var(--wistia-blue);
+      color: var(--wistia-blue);
+    }
+
+    .buttons-container {
+      display: flex;
+      justify-content: center;
+      margin-top: 24px;
+    }
+
+    /* Loader */
+    .loader-container {
+      display: none;
+      text-align: center;
+      padding: 60px 0;
+    }
+
+    .loader {
+      width: 44px; height: 44px;
+      border: 3px solid var(--border);
+      border-top-color: var(--wistia-blue);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    .loader-text { font-size: 14px; color: var(--text-muted); }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Video */
+    .video-container {
+      width: 100%; max-width: 640px;
+      margin: 0 auto 28px;
+      display: none;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      background: #000;
+      overflow: hidden;
+      position: relative;
+      padding-top: 56.25%;
+    }
+
+    #video-preview {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      border: none;
+    }
+
+    #result { display: none; }
+
+    .result-heading {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 20px;
+      letter-spacing: -0.01em;
+    }
+
+    /* Summary Banner */
+    .summary-banner {
+      background: linear-gradient(135deg, var(--wistia-dark) 0%, #1A1F36 50%, var(--wistia-blue) 100%);
+      border-radius: var(--radius);
+      padding: 28px 32px;
+      color: #fff;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow-lg);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .summary-banner::before {
+      content: '';
+      position: absolute;
+      top: -50%; right: -20%;
+      width: 300px; height: 300px;
+      background: radial-gradient(circle, rgba(41, 73, 229, 0.25) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .summary-file-label {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.5);
+      font-weight: 500;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .summary-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      letter-spacing: -0.01em;
+      word-break: break-word;
+    }
+
+    .summary-stats {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+
+    .summary-stat { display: flex; flex-direction: column; }
+
+    .summary-stat-label {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.45);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 600;
+    }
+
+    .summary-stat-value {
+      font-size: 18px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .summary-badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .summary-badge-4k { background: rgba(142, 68, 173, 0.3); color: #C39BD3; }
+    .summary-badge-hd { background: rgba(32, 191, 107, 0.2); color: #7DEFA0; }
+    .summary-badge-sd { background: rgba(247, 183, 49, 0.25); color: #F7D794; }
+
+    /* Check Cards */
+    .checks-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .check-card {
+      background: var(--bg-white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 18px 20px;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow 0.2s ease;
+    }
+
+    .check-card:hover { box-shadow: var(--shadow-md); }
+
+    .check-card-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .check-card-header .status-icon { font-size: 18px; }
+
+    .check-card-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .check-card-value {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 2px;
+    }
+
+    .check-card-note {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .check-card.full-width { grid-column: 1 / -1; }
+
+    .bitrate-meter { margin-top: 10px; }
+
+    .meter-bar {
+      height: 6px;
+      background: var(--code-bg);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .meter-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.6s ease;
+    }
+
+    .meter-fill.in-range { background: linear-gradient(90deg, var(--success), #27D97A); }
+    .meter-fill.out-range { background: linear-gradient(90deg, var(--wistia-blue), var(--wistia-blue-light)); }
+
+    .meter-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 4px;
+    }
+
+    .meter-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .pass { color: var(--success); }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .badge-4k { background: #8E44AD; }
+    .badge-hd { background: var(--success); }
+    .badge-sd { background: var(--warning); }
+
+    /* Reference Grid */
+    .reference-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 20px;
+      align-items: start;
+    }
+
+    .reference-card {
+      background: var(--bg-white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.2s ease;
+    }
+
+    .reference-card:hover {
+      box-shadow: var(--shadow-md);
+      border-color: var(--wistia-blue);
+    }
+
+    .reference-card-header {
+      padding: 16px 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      user-select: none;
+    }
+
+    .reference-card-icon {
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 15px;
+    }
+
+    .reference-card-icon.blue { background: var(--wistia-light-blue); color: var(--wistia-blue); }
+    .reference-card-icon.green { background: var(--success-bg); color: var(--success); }
+    .reference-card-icon.amber { background: var(--warning-bg); color: #D4960A; }
+    .reference-card-icon.purple { background: #F3EEFF; color: #8E44AD; }
+
+    .reference-card-title { flex: 1; font-size: 14px; font-weight: 600; color: var(--text-primary); }
+
+    .reference-card-arrow {
+      color: var(--text-muted);
+      font-size: 13px;
+      transition: transform 0.2s ease;
+    }
+
+    .reference-card.active .reference-card-arrow { transform: rotate(180deg); }
+
+    .reference-card-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.25s ease-out;
+      padding: 0 20px;
+    }
+
+    .reference-card-content-inner { padding-bottom: 16px; }
+
+    .reference-card-content h5 { font-size: 14px; font-weight: 600; color: var(--text-primary); margin: 12px 0 6px; }
+    .reference-card-content h5:first-child { margin-top: 0; }
+    .reference-card-content ul { padding-left: 18px; margin-bottom: 8px; }
+    .reference-card-content li { font-size: 13px; color: var(--text-secondary); margin-bottom: 3px; }
+    .reference-card-content li strong { color: var(--text-primary); }
+    .reference-card-content p { font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; }
+    .reference-card-content a { color: var(--wistia-blue); text-decoration: none; font-weight: 500; }
+    .reference-card-content a:hover { text-decoration: underline; }
+
+    .spec-table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 13px; }
+    .spec-table th, .spec-table td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); }
+    .spec-table th { background: var(--wistia-light-blue); font-weight: 600; color: var(--text-primary); }
+    .spec-table td { color: var(--text-secondary); }
+
+    .debug-log { display: none; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .result-animate { animation: fadeUp 0.4s ease both; }
+    .result-animate:nth-child(1) { animation-delay: 0s; }
+    .result-animate:nth-child(2) { animation-delay: 0.08s; }
+    .result-animate:nth-child(3) { animation-delay: 0.16s; }
+
+    @media (max-width: 640px) {
+      .hero { padding: 36px 20px 16px; }
+      .hero h1 { font-size: 26px; }
+      .annotation-text { font-size: 20px; }
+      .annotation-inner { height: 100px; }
+      .annotation-arrow-wrap { width: 120px; }
+      .main { padding: 0 16px 40px; }
+      .checks-grid { grid-template-columns: 1fr; }
+      .reference-grid { grid-template-columns: 1fr; }
+      .summary-stats { gap: 16px; }
+      .summary-banner { padding: 22px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="page-gradient">
+
+    <!-- Hero -->
+    <div class="hero">
+      <div class="hero-content">
+        <img src="https://raw.githubusercontent.com/pook-sapot/my-assets/main/Wistia%20Flags%20Blue.svg" alt="Wistia Logo">
+        <h1>Video Validator</h1>
+        <p>Check your video file settings before uploading to Wistia</p>
+      </div>
+    </div>
+
+    <!-- Main -->
+    <div class="main">
+
+      <div class="drop-area-wrapper" id="drop-area-wrapper">
+        <div class="drop-area" id="drop-area">
+          <div class="drop-icon">
+            <i class="fas fa-cloud-upload-alt"></i>
+          </div>
+          <h3>Drop your video file here</h3>
+          <div class="or-text">or</div>
+          <button class="btn btn-primary" id="file-select-btn">
+            <i class="fas fa-folder-open"></i> Browse Files
+          </button>
+          <input type="file" id="file-input" accept="video/*" style="display: none;">
+          <p class="drop-note">This validator only provides basic analysis of your video file. Some properties like codec information cannot be detected by the browser alone. No files are uploaded or saved during this process — analysis happens entirely in your browser.</p>
+        </div>
+      </div>
+
+      <!-- Loader -->
+      <div class="loader-container" id="loader-container">
+        <div class="loader"></div>
+        <p class="loader-text">Analyzing your video...</p>
+      </div>
+
+      <!-- Video Preview -->
+      <div class="video-container" id="video-container">
+        <video id="video-preview" controls></video>
+      </div>
+
+      <!-- Results -->
+      <div id="result"></div>
+
+      <!-- Buttons -->
+      <div class="buttons-container" id="buttons-container" style="display: none;">
+        <button class="btn btn-secondary" id="start-over-btn">
+          <i class="fas fa-redo"></i> Start Over
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="debug-log" id="debug-log">
+    <strong>Debug Log:</strong><br>
+    <div id="log-content"></div>
+  </div>
+
+  <script>
+    function logDebug(msg) {
+      const el = document.getElementById('log-content');
+      const t = new Date().toLocaleTimeString();
+      el.innerHTML += `[${t}] ${msg}<br>`;
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      const dropArea = document.getElementById('drop-area');
+      const dropWrapper = document.getElementById('drop-area-wrapper');
+      const fileInput = document.getElementById('file-input');
+      const fileSelectBtn = document.getElementById('file-select-btn');
+      const startOverBtn = document.getElementById('start-over-btn');
+      const loaderContainer = document.getElementById('loader-container');
+      const result = document.getElementById('result');
+      const videoContainer = document.getElementById('video-container');
+      const videoPreview = document.getElementById('video-preview');
+      const buttonsContainer = document.getElementById('buttons-container');
+
+      fileSelectBtn.addEventListener('click', function (e) { e.stopPropagation(); fileInput.click(); });
+      dropArea.addEventListener('click', function () { fileInput.click(); });
+
+      fileInput.addEventListener('change', function (e) {
+        if (e.target.files && e.target.files.length) handleFile(e.target.files[0]);
+      });
+
+      startOverBtn.addEventListener('click', resetInterface);
+
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => {
+        dropArea.addEventListener(evt, function (e) { e.preventDefault(); e.stopPropagation(); });
+      });
+      ['dragenter', 'dragover'].forEach(evt => {
+        dropArea.addEventListener(evt, function () { dropArea.classList.add('drag-over'); });
+      });
+      ['dragleave', 'drop'].forEach(evt => {
+        dropArea.addEventListener(evt, function () { dropArea.classList.remove('drag-over'); });
+      });
+      dropArea.addEventListener('drop', function (e) {
+        const files = e.dataTransfer.files;
+        if (files && files.length) handleFile(files[0]);
+      });
+
+      function resetInterface() {
+        fileInput.value = '';
+        videoContainer.style.display = 'none';
+        if (videoPreview.src && videoPreview.src.startsWith('blob:')) URL.revokeObjectURL(videoPreview.src);
+        videoPreview.src = '';
+        videoPreview.onloadedmetadata = null;
+        videoPreview.onerror = null;
+        result.style.display = 'none';
+        buttonsContainer.style.display = 'none';
+        dropWrapper.style.display = 'block';
+      }
+
+      function handleFile(file) {
+        if (!file.type.startsWith('video/')) { alert('Please select a video file.'); return; }
+
+        loaderContainer.style.display = 'block';
+        result.style.display = 'none';
+        videoContainer.style.display = 'none';
+        dropWrapper.style.display = 'none';
+
+        const fileExtension = file.name.split('.').pop().toLowerCase();
+        const isMP4 = file.type === 'video/mp4' || fileExtension === 'mp4';
+
+        try {
+          const objectURL = URL.createObjectURL(file);
+          videoPreview.src = objectURL;
+
+          videoPreview.onloadedmetadata = function () {
+            const w = videoPreview.videoWidth, h = videoPreview.videoHeight, dur = videoPreview.duration;
+
+            getApproximateFrameRate(videoPreview, function (fps) {
+              displayResult({ file, width: w, height: h, duration: dur, videoType: file.type, isMP4, fileExtension, frameRate: fps });
+              videoContainer.style.display = 'block';
+              buttonsContainer.style.display = 'flex';
+              loaderContainer.style.display = 'none';
+              setupReferenceCards();
+            });
+
+            videoPreview.addEventListener('loadeddata', function () {
+              try {
+                const c = document.createElement('canvas');
+                c.width = videoPreview.videoWidth; c.height = videoPreview.videoHeight;
+                c.getContext('2d').drawImage(videoPreview, 0, 0, c.width, c.height);
+                videoPreview.setAttribute('poster', c.toDataURL('image/jpeg'));
+              } catch (e) {}
+            });
+          };
+
+          videoPreview.onerror = function () {
+            if (videoPreview.src && videoPreview.src.startsWith('blob:')) URL.revokeObjectURL(videoPreview.src);
+            resetInterface();
+            loaderContainer.style.display = 'none';
+            alert('Error analyzing video. The format may not be supported by your browser.');
+          };
+        } catch (error) {
+          alert('Error analyzing file. Please try a different file.');
+          resetInterface();
+          loaderContainer.style.display = 'none';
+        }
+      }
+
+      function getApproximateFrameRate(video, callback) {
+        let lastTime = 0, frameCount = 0;
+        function check() {
+          if (video.currentTime === lastTime) { requestAnimationFrame(check); return; }
+          frameCount++; lastTime = video.currentTime;
+          if (frameCount < 20) { requestAnimationFrame(check); }
+          else {
+            video.pause(); video.currentTime = 0;
+            const avg = Math.round(frameCount / (lastTime * 1000) * 1000);
+            callback(avg > 0 ? avg : 30);
+          }
+        }
+        video.muted = true;
+        video.play().then(() => requestAnimationFrame(check)).catch(() => callback(30));
+      }
+
+      function setupReferenceCards() {
+        document.querySelectorAll('.reference-card-header').forEach(function (el) {
+          el.addEventListener('click', function () {
+            const card = this.parentElement;
+            card.classList.toggle('active');
+            const content = card.querySelector('.reference-card-content');
+            content.style.maxHeight = content.style.maxHeight ? null : content.scrollHeight + 'px';
+          });
+        });
+      }
+
+      function displayResult(meta) {
+        result.style.display = 'block';
+        const mins = Math.floor(meta.duration / 60);
+        const secs = Math.floor(meta.duration % 60);
+        const duration = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        const bitrate = Math.round((meta.file.size * 8) / meta.duration / 1000);
+
+        const accepted = ['mp4','mov','mpg','avi','flv','f4v','m4v','asf','wmv','vob','mod','3gp','mkv','divx','xvid','webm'];
+        const isAccepted = accepted.includes(meta.fileExtension.toLowerCase());
+        const is4K = meta.width >= 3840 || meta.height >= 2160;
+        const isHD = meta.width >= 1280 || meta.height >= 720;
+        const title = meta.file.name.replace(/\.[^/.]+$/, '');
+
+        function checkBitrate(kbps, is4KV) {
+          if (is4KV) return (kbps >= 12000 && kbps <= 15000) ? { note: 'Recommended for 4K' } : { note: 'Recommended range for 4K: 12,000–15,000 kbps' };
+          return (kbps >= 5000 && kbps <= 8000) ? { note: 'Recommended' } : { note: 'Recommended range: 5,000–8,000 kbps' };
+        }
+        const bitrateCheck = checkBitrate(bitrate, is4K);
+
+        function checkFps(fps) { return (fps >= 15 && fps <= 60) ? { note: '' } : { note: 'Recommended range: 15–60 fps' }; }
+        const fpsCheck = checkFps(meta.frameRate);
+
+        function fType(t) {
+          const m = { 'video/quicktime': 'QuickTime (MOV)', 'video/mp4': 'MP4', 'video/webm': 'WebM', 'video/x-msvideo': 'AVI', 'video/x-matroska': 'MKV' };
+          return m[t] || t.replace('video/', '');
+        }
+
+        function sBadge() {
+          if (is4K) return '<span class="summary-badge summary-badge-4k">4K</span>';
+          if (isHD) return '<span class="summary-badge summary-badge-hd">HD</span>';
+          return '<span class="summary-badge summary-badge-sd">SD</span>';
+        }
+
+        function badge() {
+          if (is4K) return '<span class="badge badge-4k">4K</span>';
+          if (isHD) return '<span class="badge badge-hd">HD</span>';
+          return '<span class="badge badge-sd">SD</span>';
+        }
+
+        function fSize(b) {
+          if (b === 0) return '0 Bytes';
+          const k = 1024, s = ['Bytes','KB','MB','GB','TB'];
+          const i = Math.floor(Math.log(b) / Math.log(k));
+          return parseFloat((b / Math.pow(k, i)).toFixed(2)) + ' ' + s[i];
+        }
+
+        const maxBR = is4K ? 20000 : 12000;
+        const recLow = is4K ? 12000 : 5000;
+        const recHigh = is4K ? 15000 : 8000;
+        const meterPct = Math.min((bitrate / maxBR) * 100, 100);
+        const inRange = bitrate >= recLow && bitrate <= recHigh;
+        const fmtNote = meta.isMP4 ? 'Recommended' : isAccepted ? 'Accepted — MP4 recommended' : 'Not accepted by Wistia';
+        const ic = '<span class="status-icon pass"><i class="fas fa-check-circle"></i></span>';
+
+        result.innerHTML = `
+          <h2 class="result-heading result-animate">File Analysis Results</h2>
+
+          <div class="checks-grid result-animate">
+            <div class="check-card">
+              <div class="check-card-header">${ic}<span class="check-card-label">Title</span></div>
+              <div class="check-card-value">${title}</div>
+              <div class="check-card-note">${meta.fileExtension.toUpperCase()} file</div>
+            </div>
+            <div class="check-card">
+              <div class="check-card-header">${ic}<span class="check-card-label">File Format</span></div>
+              <div class="check-card-value">${meta.isMP4 ? 'MP4' : meta.fileExtension.toUpperCase()}</div>
+              <div class="check-card-note">${fmtNote}</div>
+            </div>
+            <div class="check-card">
+              <div class="check-card-header">${ic}<span class="check-card-label">Resolution</span></div>
+              <div class="check-card-value">${meta.width}x${meta.height} ${badge()}</div>
+            </div>
+            <div class="check-card">
+              <div class="check-card-header">${ic}<span class="check-card-label">Frame Rate</span></div>
+              <div class="check-card-value">~${meta.frameRate} fps</div>
+              <div class="check-card-note">${fpsCheck.note || ''}</div>
+            </div>
+            <div class="check-card">
+              <div class="check-card-header">${ic}<span class="check-card-label">Duration</span></div>
+              <div class="check-card-value">${duration}</div>
+              <div class="check-card-note">${fSize(meta.file.size)}</div>
+            </div>
+            <div class="check-card">
+              <div class="check-card-header">${ic}<span class="check-card-label">Bitrate</span></div>
+              <div class="check-card-value">${bitrate.toLocaleString()} kbps</div>
+              <div class="check-card-note">${bitrateCheck.note}</div>
+              <div class="bitrate-meter">
+                <div class="meter-bar"><div class="meter-fill ${inRange ? 'in-range' : 'out-range'}" style="width: ${meterPct}%"></div></div>
+                <div class="meter-labels">
+                  <span class="meter-label">0</span>
+                  <span class="meter-label">${is4K ? '12k' : '5k'}</span>
+                  <span class="meter-label">${is4K ? '15k' : '8k'}</span>
+                  <span class="meter-label">${(maxBR / 1000).toFixed(0)}k+</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="reference-grid result-animate">
+            <div class="reference-card">
+              <div class="reference-card-header">
+                <div class="reference-card-icon blue"><i class="fas fa-clipboard-check"></i></div>
+                <span class="reference-card-title">Wistia Requirements</span>
+                <i class="fas fa-chevron-down reference-card-arrow"></i>
+              </div>
+              <div class="reference-card-content"><div class="reference-card-content-inner">
+                <h5>Video</h5>
+                <ul>
+                  <li><strong>File Type:</strong> MP4 (recommended)</li>
+                  <li><strong>Codec:</strong> h.264/AVC (required)</li>
+                  <li><strong>Resolution:</strong> between 640px and 3840px wide</li>
+                  <li><strong>Bitrate:</strong> 5,000–8,000 kbps (recommended), 12,000–15,000 kbps for 4K</li>
+                  <li><strong>Framerate:</strong> constant, 15–60 fps</li>
+                  <li><strong>Aspect Ratio:</strong> any accepted; wider = higher quality</li>
+                </ul>
+                <h5>Audio</h5>
+                <ul>
+                  <li><strong>Codec:</strong> AAC (Advanced Audio Codec)</li>
+                  <li><strong>Sample Rate:</strong> 44.1 kHz</li>
+                  <li><strong>Channels:</strong> 2-channel Stereo (not surround)</li>
+                </ul>
+              </div></div>
+            </div>
+            <div class="reference-card">
+              <div class="reference-card-header">
+                <div class="reference-card-icon green"><i class="fas fa-tachometer-alt"></i></div>
+                <span class="reference-card-title">Derivative Bitrates</span>
+                <i class="fas fa-chevron-down reference-card-arrow"></i>
+              </div>
+              <div class="reference-card-content"><div class="reference-card-content-inner">
+                <table class="spec-table">
+                  <tr><th>Derivative</th><th>Max Bitrate</th></tr>
+                  <tr><td>3840 × 2160p (4K)</td><td>11,250 kbps</td></tr>
+                  <tr><td>1920 × 1080p</td><td>5,625 kbps</td></tr>
+                  <tr><td>1280 × 720p</td><td>3,750 kbps</td></tr>
+                  <tr><td>960 × 540p</td><td>1,800 kbps</td></tr>
+                  <tr><td>640 × 360p</td><td>1,200 kbps</td></tr>
+                  <tr><td>400 × 224p</td><td>300 kbps</td></tr>
+                </table>
+              </div></div>
+            </div>
+            <div class="reference-card">
+              <div class="reference-card-header">
+                <div class="reference-card-icon amber"><i class="fas fa-file-video"></i></div>
+                <span class="reference-card-title">Supported Formats</span>
+                <i class="fas fa-chevron-down reference-card-arrow"></i>
+              </div>
+              <div class="reference-card-content"><div class="reference-card-content-inner">
+                <p><strong>Recommended:</strong> MP4 with H.264 codec, MP3 for audio-only</p>
+                <p><strong>Video:</strong> MOV, MPG, AVI, FLV, F4V, MP4, M4V, ASF, WMV, VOB, MOD, 3GP, MKV, DIVX, XVID, WEBM</p>
+                <p><strong>Audio:</strong> MP3, WAV, AIF, AU, M4A, OGG</p>
+              </div></div>
+            </div>
+            <div class="reference-card">
+              <div class="reference-card-header">
+                <div class="reference-card-icon purple"><i class="fas fa-wrench"></i></div>
+                <span class="reference-card-title">Troubleshooting</span>
+                <i class="fas fa-chevron-down reference-card-arrow"></i>
+              </div>
+              <div class="reference-card-content"><div class="reference-card-content-inner">
+                <h5>Need to convert your video to H.264?</h5>
+                <p>We recommend <a href="https://handbrake.fr/" target="_blank" rel="noopener">Handbrake</a>, a free tool that can convert nearly any video format to properly optimized MP4 files for Wistia.</p>
+                <h5>Export Settings</h5>
+                <p>Follow our <a href="https://support.wistia.com/en/articles/8268259-export-settings" target="_blank" rel="noopener">guidelines on media export settings</a> for the best quality output.</p>
+                <h5>Upload & Encoding Issues</h5>
+                <p>Check our <a href="https://support.wistia.com/en/articles/8279759-upload-troubleshooting" target="_blank" rel="noopener">Upload Troubleshooting</a> or <a href="https://support.wistia.com/en/articles/8273611-media-encoding-troubleshooting" target="_blank" rel="noopener">Media Encoding Troubleshooting Guide</a> for help.</p>
+              </div></div>
+            </div>
+          </div>
+        `;
+      }
+    });
+  </script>
+</body>
+</html>
