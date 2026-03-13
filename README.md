@@ -1,4 +1,4 @@
-# Wistia Video Validator
+# Video Validator
 
 A browser-based tool for checking video file settings before uploading to Wistia, based on our recommended export specifications.
 
